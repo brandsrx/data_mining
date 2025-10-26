@@ -1,0 +1,85 @@
+---
+title: "Imputaciones"
+author: "Brandon"
+format: html
+editor: visual
+---
+
+## Metodos de imputacion de datos
+
+La imputacion de datos es un conjunto de tecnicas usadas para remplazar datos faltantes
+
+## Imputacion simple
+
+Imputacion por media y mediana: esto consiste en remplazar los datos por la moda o media encontrada lo cual es facil de implementar pero puede distorcionar la distribucion original
+
+```{r}
+# Creamos un data frame con valores faltantes
+df <- data.frame(
+  Edad = c(25, 30, NA, 40, 35),
+  Ingresos = c(3000, 3500, 4000, NA, 5000)
+)
+
+print("Antes de imputar:")
+print(df)
+
+# Imputar con la media
+df$Edad[is.na(df$Edad)] <- mean(df$Edad, na.rm = TRUE)
+df$Ingresos[is.na(df$Ingresos)] <- mean(df$Ingresos, na.rm = TRUE)
+
+print("Después de imputar con la media:")
+print(df)
+
+```
+
+Imputacion por la moda: de la misma forma que la media y mediana solo que en este caso la moda se usa en variables categoricas
+
+```{r}
+getmode <- function(v) {
+  uniqv <- unique(v)                       # obtenemos los valores únicos
+  uniqv[which.max(tabulate(match(v, uniqv)))]  # contamos y devolvemos el que más se repite
+}
+```
+
+## Imputacion por regresion
+
+Este metodo se usa un modelo de regresion para estimar los valores faltantes basandose en las otras variables del conjunto
+
+```{r}
+library(MASS) # cargamos la libreria 
+
+# Creamos un modelo de regresión simple usando las filas completas
+modelo <- lm(Edad ~ Ingresos, data = df, na.action = na.exclude)
+
+# Predicción de los valores faltantes
+df$Edad[is.na(df$Edad)] <- predict(modelo, newdata = df[is.na(df$Edad), ])
+
+# Imputación de Ingresos usando Edad como predictor
+modelo2 <- lm(Ingresos ~ Edad, data = df, na.action = na.exclude)
+df$Ingresos[is.na(df$Ingresos)] <- predict(modelo2, newdata = df[is.na(df$Ingresos), ])
+```
+
+## Imputacion Hot-Deck
+
+Los valores faltantes se remplaza por valores tomados por observaciones similares (donantes) para este metodo se podria usar el KNN
+
+```{r}
+library(VIM) # cargamos la libreria
+# en este ejemplo vamos a imputar la variable Edad 
+# domain_var indica que la imputacion se hace en el mismo dominio
+df_imputado <- hotdeck(df, variable = "Edad", domain_var = "Genero")
+```
+
+## Imputacion multiple
+
+En lugar de imputar un unico valor para cada dato faltante, este metodo genera multiples conjuntos de datos imputados, cada uno con diferentes estimaciones para los valores faltantes
+
+```{r}
+library(mice) # cargamos la libreria
+
+# m = 5 , es la cantidad de conjuntos de datos imputados
+# metodo pmmm (Predictive Mean Matching)
+#maxit = 10, numero maximos de iteraciones para la convergencia
+#complete() combina los conjuntos imputados en un solo dataframe
+imp <- mice(datos,m=5,method="pmm",maxit=10)
+```
